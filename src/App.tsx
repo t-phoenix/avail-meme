@@ -1,34 +1,43 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useAccount } from 'wagmi';
+import ConnectWalletButton from './components/connect-button';
+import InitButton from './components/init-button';
+import FetchUnifiedBalanceButton from './components/fetch-unified-balance-button';
+import DeinitButton from './components/de-init-button';
+import { isInitialized } from './lib/nexus';
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { isConnected } = useAccount();
+  const [initialized, setInitialized] = useState(isInitialized());
+  const [balances, setBalances] = useState<any>(null);
+ 
+  const btn =
+    'px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 ' +
+    'disabled:opacity-50 disabled:cursor-not-allowed';
+ 
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="min-h-screen flex items-center justify-center">
+      <h1 className="text-2xl font-bold">Hello..... here I ma mainnet</h1>
+      <div className="flex flex-col items-center gap-4">
+        <ConnectWalletButton className={btn} />
+        <InitButton className={btn} onReady={() => setInitialized(true)} />
+        <FetchUnifiedBalanceButton className={btn} onResult={(r) => setBalances(r)} />
+        <DeinitButton className={btn} onDone={() => { setInitialized(false); setBalances(null); }} />
+
+        <div className="mt-2">
+          <b>Wallet Status:</b> {isConnected ? 'Connected' : 'Not connected'}
+        </div>
+        <div className="mt-2">
+          <b>Nexus SDK Initialization Status:</b> {initialized ? 'Initialized' : 'Not initialized'}
+        </div>
+ 
+        {balances && (
+          <pre className="whitespace-pre-wrap">{JSON.stringify(balances, null, 2)}</pre>
+        )}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div> 
   )
 }
 
