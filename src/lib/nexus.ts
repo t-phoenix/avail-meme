@@ -1,6 +1,6 @@
 import { NexusSDK } from "@avail-project/nexus-core";
 
-export const sdk = new NexusSDK({ network: "testnet" });
+export const sdk = new NexusSDK({ network: "mainnet" });
 
 // Thin wrapper that calls sdk.isInitialized() from the SDK
 export function isInitialized() {

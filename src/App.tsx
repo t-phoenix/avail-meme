@@ -1,44 +1,39 @@
-import { useState } from 'react'
-import { useAccount } from 'wagmi';
-import ConnectWalletButton from './components/connect-button';
-import InitButton from './components/init-button';
-import FetchUnifiedBalanceButton from './components/fetch-unified-balance-button';
-import DeinitButton from './components/de-init-button';
-import { isInitialized } from './lib/nexus';
-import './App.css'
+import ConnectWalletButton from "./components/connect-button";
+import SwapComponent from "./components/SwapComponent";
+import BalancePanel from "./components/BalancePanel";
+import "./App.css";
 
 function App() {
-  const { isConnected } = useAccount();
-  const [initialized, setInitialized] = useState(isInitialized());
-  const [balances, setBalances] = useState<any>(null);
- 
-  const btn =
-    'px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 ' +
-    'disabled:opacity-50 disabled:cursor-not-allowed';
- 
-
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <h1 className="text-2xl font-bold">Hello..... here I ma mainnet</h1>
-      <div className="flex flex-col items-center gap-4">
-        <ConnectWalletButton className={btn} />
-        <InitButton className={btn} onReady={() => setInitialized(true)} />
-        <FetchUnifiedBalanceButton className={btn} onResult={(r) => setBalances(r)} />
-        <DeinitButton className={btn} onDone={() => { setInitialized(false); setBalances(null); }} />
+    <div className="app-container">
+      {/* Header */}
+      <header className="header">
+        <div className="header-content">
+          <h1 className="app-title">Avail Meme</h1>
+          <ConnectWalletButton className="connect-button" />
+        </div>
+      </header>
 
-        <div className="mt-2">
-          <b>Wallet Status:</b> {isConnected ? 'Connected' : 'Not connected'}
+      {/* Main Body - 80% of screen height */}
+      <main className="main-content">
+        <div className="main-inner">
+          <div className="swap-section-container">
+            <SwapComponent />
+          </div>
+          <div className="balance-panel-container">
+            <BalancePanel />
+          </div>
         </div>
-        <div className="mt-2">
-          <b>Nexus SDK Initialization Status:</b> {initialized ? 'Initialized' : 'Not initialized'}
+      </main>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-content">
+          <p>&copy; 2025 Avail Meme. Built with React and Avail Nexus.</p>
         </div>
- 
-        {balances && (
-          <pre className="whitespace-pre-wrap">{JSON.stringify(balances, null, 2)}</pre>
-        )}
-      </div>
-    </div> 
-  )
+      </footer>
+    </div>
+  );
 }
 
-export default App
+export default App;

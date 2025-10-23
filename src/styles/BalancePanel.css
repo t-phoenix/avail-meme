@@ -1,0 +1,563 @@
+.balance-panel {
+  background-color: #0f172a;
+  border-left: 1px solid #334155;
+  height: 100%;
+  overflow-y: auto;
+  min-width: 380px;
+  max-width: 380px;
+}
+
+.balance-panel-content {
+  padding: 1.5rem;
+}
+
+/* Panel Header */
+.panel-header {
+  margin-bottom: 1.5rem;
+}
+
+.panel-header h2 {
+  color: #f1f5f9;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* Control Buttons */
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.control-button {
+  background: linear-gradient(135deg, #8b5cf6, #d946ef);
+  border: none;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.control-button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.control-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #64748b, #94a3b8);
+}
+
+.init-button {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+}
+
+.fetch-button {
+  background: linear-gradient(135deg, #8b5cf6, #d946ef);
+}
+
+/* Status Section */
+.status-section {
+  margin-bottom: 1.5rem;
+  background-color: #1e293b;
+  padding: 1rem;
+  border-radius: 0.75rem;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-label {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.status-value.connected {
+  color: #22c55e;
+}
+
+.status-value.disconnected {
+  color: #ef4444;
+}
+
+/* Not Connected State */
+.not-connected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #94a3b8;
+}
+
+.not-connected-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.not-connected h3 {
+  color: #f1f5f9;
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.not-connected p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Wallet Address */
+.wallet-address {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #1e293b;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  color: #f1f5f9;
+  font-size: 0.875rem;
+}
+
+.wallet-icon {
+  font-size: 1.25rem;
+}
+
+/* Total Balance */
+.total-balance {
+  margin-bottom: 1.5rem;
+}
+
+.balance-amount {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 0.5rem 0;
+}
+
+.balance-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #ef4444;
+}
+
+.balance-change.positive {
+  color: #22c55e;
+}
+
+.balance-change.negative {
+  color: #ef4444;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.action-button {
+  background: linear-gradient(135deg, #8b5cf6, #d946ef);
+  border: none;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.action-button:hover {
+  opacity: 0.9;
+}
+
+.action-button.send {
+  background: linear-gradient(135deg, #c026d3, #e879f9);
+}
+
+.action-button.receive {
+  background: linear-gradient(135deg, #a855f7, #c026d3);
+}
+
+.action-icon {
+  font-size: 1.25rem;
+}
+
+/* Tabs */
+.balance-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #334155;
+  overflow-x: auto;
+}
+
+.tab-button {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab-button:hover {
+  color: #f1f5f9;
+}
+
+.tab-button.active {
+  color: #f1f5f9;
+  border-bottom-color: #8b5cf6;
+}
+
+/* Token List */
+.token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.token-list h3 {
+  color: #f1f5f9;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem 0;
+}
+
+.tokens-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.token-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: #1e293b;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  transition: background-color 0.2s;
+  gap: 1rem;
+  min-height: 84px;
+}
+
+.token-item:hover {
+  background-color: #334155;
+}
+
+.token-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.token-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.token-icon-img {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.token-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+  padding-top: 0.125rem;
+}
+
+.token-name {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.chain-badge {
+  background-color: #8b5cf6;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.chain-logo {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.token-address {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-family: monospace;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.4;
+}
+
+.token-address.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0.25rem 0.5rem;
+  margin: -0.25rem -0.5rem;
+  border-radius: 0.375rem;
+}
+
+.token-address.clickable:hover {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+}
+
+.copy-icon {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.token-decimals {
+  color: #64748b;
+  font-size: 0.65rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  white-space: nowrap;
+}
+
+.token-decimals-right {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  text-align: right;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.token-amount {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.token-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  min-width: 145px;
+  padding-top: 0.125rem;
+}
+
+.token-balance {
+  color: #f1f5f9;
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-align: right;
+  line-height: 1.3;
+  white-space: nowrap;
+  min-height: 22px;
+}
+
+.token-fiat {
+  color: #22c55e;
+  font-size: 0.8rem;
+  text-align: right;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  min-height: 18px;
+}
+
+.token-raw {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-family: monospace;
+  text-align: right;
+  line-height: 1.3;
+  word-break: break-all;
+  max-width: 145px;
+  min-height: 16px;
+}
+
+.token-value {
+  color: #f1f5f9;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.token-change {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.loading,
+.no-tokens {
+  text-align: center;
+  color: #94a3b8;
+  padding: 2rem;
+}
+
+.no-tokens p {
+  margin: 0.5rem 0;
+}
+
+.no-tokens .hint {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.hidden-tokens {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.hidden-tokens:hover {
+  background-color: #1e293b;
+  border-color: #475569;
+}
+
+.refresh-button {
+  width: 100%;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: #334155;
+  color: #f1f5f9;
+}
+
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Scrollbar Styling */
+.balance-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.balance-panel::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.balance-panel::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.balance-panel::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Raw Data Section */
+.raw-data-section {
+  margin-top: 1.5rem;
+  background-color: #1e293b;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.raw-data-section summary {
+  padding: 1rem;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 500;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.raw-data-section summary:hover {
+  color: #f1f5f9;
+  background-color: #334155;
+}
+
+.raw-data-section pre {
+  margin: 0;
+  padding: 1rem;
+  background-color: #0f172a;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  overflow-x: auto;
+  border-top: 1px solid #334155;
+}
+
