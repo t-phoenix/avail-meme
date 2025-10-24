@@ -5,13 +5,28 @@
   max-width: 500px;
   width: 100%;
   border: 1px solid #334155;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .swap-container {
+    padding: 1.5rem;
+    border-radius: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .swap-container {
+    padding: 1rem;
+    border-radius: 0.75rem;
+  }
 }
 
 .swap-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .swap-header h2 {

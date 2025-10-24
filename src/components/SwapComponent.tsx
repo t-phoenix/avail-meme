@@ -74,13 +74,13 @@ export default function SwapComponent() {
       </div>
 
       {/* Swap Icon */}
-      <div className="swap-icon-container">
+      {/* <div className="swap-icon-container">
         <button className="swap-icon-button" onClick={swapTokens}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M7 10l5 5 5-5M7 14l5-5 5 5"/>
           </svg>
         </button>
-      </div>
+      </div> */}
 
       {/* To Section */}
       <div className="swap-section">
