@@ -1,10 +1,15 @@
 import { useAccount } from 'wagmi';
-import { initializeWithProvider, isInitialized } from '../lib/nexus.ts';
+import { initializeWithProvider, isInitialized, getUnifiedBalances } from '../lib/nexus.ts';
  
 export default function InitButton({
   className,
   onReady,
-}: { className?: string; onReady?: () => void }) {
+  onBalanceFetched,
+}: { 
+  className?: string; 
+  onReady?: () => void;
+  onBalanceFetched?: (result: any) => void;
+}) {
   const { connector } = useAccount();
   
   const onClick = async () => {
@@ -16,10 +21,16 @@ export default function InitButton({
       // We're calling our wrapper function from the lib/nexus.ts file here.
       await initializeWithProvider(provider);
       onReady?.();
-      alert('Nexus initialized');
+      
+      // Automatically fetch unified balances after initialization
+      const balances = await getUnifiedBalances();
+      onBalanceFetched?.(balances);
+      
+      console.log('Nexus initialized and balances fetched:', balances);
+      alert('Nexus initialized and balances fetched successfully!');
     } catch (e: any) {
       alert(e?.message ?? 'Init failed');
     }
   };
-  return <button className={className} onClick={onClick} disabled={isInitialized()}>Initialize Nexus</button>;
+  return <button className={className} onClick={onClick} disabled={isInitialized()}>Initialize Nexus & Get Balance</button>;
 }

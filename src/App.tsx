@@ -1,9 +1,34 @@
+import { useState } from "react";
 import ConnectWalletButton from "./components/connect-button";
 import SwapComponent from "./components/SwapComponent";
 import BalancePanel from "./components/BalancePanel";
 import "./App.css";
 
+export interface TokenBalance {
+  chain: string;
+  chainId: number;
+  chainLogo?: string;
+  symbol: string;
+  balance: string;
+  decimals: number;
+  contractAddress: string;
+  isNative: boolean;
+  icon?: string;
+  balanceInFiat?: number;
+}
+
 function App() {
+  const [unifiedBalances, setUnifiedBalances] = useState<TokenBalance[]>([]);
+  const [selectedToken, setSelectedToken] = useState<TokenBalance | null>(null);
+
+  const handleTokenSelect = (token: TokenBalance) => {
+    setSelectedToken(token);
+  };
+
+  const handleBalancesUpdate = (balances: TokenBalance[]) => {
+    setUnifiedBalances(balances);
+  };
+
   return (
     <div className="app-container">
       {/* Header */}
@@ -18,10 +43,16 @@ function App() {
       <main className="main-content">
         <div className="main-inner">
           <div className="swap-section-container">
-            <SwapComponent />
+            <SwapComponent 
+              selectedToken={selectedToken}
+              unifiedBalances={unifiedBalances}
+            />
           </div>
           <div className="balance-panel-container">
-            <BalancePanel />
+            <BalancePanel 
+              onTokenSelect={handleTokenSelect}
+              onBalancesUpdate={handleBalancesUpdate}
+            />
           </div>
         </div>
       </main>

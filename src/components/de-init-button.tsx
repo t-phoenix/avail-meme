@@ -7,7 +7,7 @@ export default function DeinitButton({
   const onClick = async () => {
     await deinit();
     onDone?.();
-    alert('Nexus de-initialized');
+    alert('Nexus de-initialized. Initialization state cleared.');
   };
   return <button className={className} onClick={onClick} disabled={!isInitialized()}>De-initialize</button>;
 }

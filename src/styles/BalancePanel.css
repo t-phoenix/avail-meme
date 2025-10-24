@@ -305,6 +305,32 @@
   background-color: #334155;
 }
 
+.token-item.clickable-card {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.token-item.clickable-card:hover {
+  background-color: #475569;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.token-item.clickable-card:active {
+  transform: translateY(0);
+}
+
+.token-item.non-swappable {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.token-item.non-swappable:hover {
+  background-color: #1e293b;
+  transform: none;
+  box-shadow: none;
+}
+
 .token-left {
   display: flex;
   align-items: flex-start;

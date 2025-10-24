@@ -1,28 +1,54 @@
-import { useState } from 'react';
-import { isInitialized } from '../lib/nexus';
+import { useState, useEffect } from 'react';
+import { isInitialized, wasPreviouslyInitialized, initializeWithProvider, getUnifiedBalances } from '../lib/nexus';
+import { useAccount } from 'wagmi';
 import InitButton from './init-button';
-import FetchUnifiedBalanceButton from './fetch-unified-balance-button';
+import type { TokenBalance } from '../App';
+import { FROM_TOKENS } from '../lib/chains';
 import '../styles/BalancePanel.css';
 
-interface TokenBalance {
-  chain: string;
-  chainId: number;
-  chainLogo?: string;
-  symbol: string;
-  balance: string;
-  decimals: number;
-  contractAddress: string;
-  isNative: boolean;
-  icon?: string;
-  balanceInFiat?: number;
+interface BalancePanelProps {
+  onTokenSelect: (token: TokenBalance) => void;
+  onBalancesUpdate: (balances: TokenBalance[]) => void;
 }
 
-export default function BalancePanel() {
+export default function BalancePanel({ onTokenSelect, onBalancesUpdate }: BalancePanelProps) {
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [rawBalanceData, setRawBalanceData] = useState<any>(null);
   const [nexusInitialized, setNexusInitialized] = useState(isInitialized());
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const { connector } = useAccount();
+
+  // Auto-initialize SDK on mount if it was previously initialized
+  useEffect(() => {
+    const autoInitialize = async () => {
+      if (wasPreviouslyInitialized() && !isInitialized()) {
+        try {
+          const provider = await connector?.getProvider();
+          if (provider) {
+            await initializeWithProvider(provider);
+            setNexusInitialized(true);
+            console.log('Nexus SDK auto-initialized from previous session');
+            
+            // Auto-fetch balances after initialization
+            try {
+              const balances = await getUnifiedBalances();
+              handleBalanceFetch(balances);
+              console.log('Balances auto-fetched after initialization');
+            } catch (error) {
+              console.error('Failed to auto-fetch balances:', error);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to auto-initialize Nexus SDK:', error);
+          // Clear the flag if auto-initialization fails
+          localStorage.removeItem('nexus_initialized');
+        }
+      }
+    };
+
+    autoInitialize();
+  }, [connector]);
 
   const handleBalanceFetch = (result: any) => {
     setIsLoading(true);
@@ -69,6 +95,8 @@ export default function BalancePanel() {
       }
 
       setTokens(parsedTokens);
+      // Notify parent component about balance updates
+      onBalancesUpdate(parsedTokens);
     } catch (error) {
       console.error('Error parsing balances:', error);
     } finally {
@@ -119,6 +147,10 @@ export default function BalancePanel() {
     }
   };
 
+  const isSwappable = (symbol: string): boolean => {
+    return FROM_TOKENS.includes(symbol);
+  };
+
   return (
     <div className="balance-panel">
       <div className="balance-panel-content">
@@ -135,10 +167,7 @@ export default function BalancePanel() {
               console.log('Nexus initialized successfully');
               setNexusInitialized(true);
             }}
-          />
-          <FetchUnifiedBalanceButton 
-            className="control-button fetch-button"
-            onResult={handleBalanceFetch}
+            onBalanceFetched={handleBalanceFetch}
           />
         </div>
 
@@ -163,14 +192,21 @@ export default function BalancePanel() {
               <p>No tokens found</p>
               <p className="hint">
                 {!nexusInitialized 
-                  ? 'Please initialize Nexus first' 
-                  : 'Click "Fetch Unified Balances" to load your tokens'}
+                  ? 'Click "Initialize Nexus & Get Balance" to load your tokens' 
+                  : 'No tokens available in your wallet'}
               </p>
             </div>
           ) : (
             <div className="tokens-container">
-              {tokens.map((token, index) => (
-                <div key={index} className="token-item">
+              {tokens.map((token, index) => {
+                const canSwap = isSwappable(token.symbol);
+                return (
+                  <div 
+                    key={index} 
+                    className={`token-item ${canSwap ? 'clickable-card' : 'non-swappable'}`}
+                    onClick={canSwap ? () => onTokenSelect(token) : undefined}
+                    title={canSwap ? 'Click to use in swap' : 'Not available for swapping'}
+                  >
                   <div className="token-left">
                     {token.icon ? (
                       <img src={token.icon} alt={token.symbol} className="token-icon-img" />
@@ -230,7 +266,8 @@ export default function BalancePanel() {
                     </div> */}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
