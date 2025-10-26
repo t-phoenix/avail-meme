@@ -4,6 +4,8 @@ import type {
   BridgeAndExecuteParams, 
   BridgeAndExecuteSimulationResult,
   BridgeAndExecuteResult,
+  BridgeParams,
+  BridgeResult,
   SUPPORTED_TOKENS,
   SUPPORTED_CHAINS_IDS 
 } from '@avail-project/nexus-core';
@@ -306,6 +308,159 @@ export async function executeBridgeAndSwap(
     return result;
   } catch (error) {
     console.error('Bridge and Execute failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    } as BridgeAndExecuteResult;
+  }
+}
+
+/**
+ * Execute bridge then swap - Two separate operations
+ * First bridges tokens to Base, then executes the swap on Base
+ * This is the recommended approach when bridgeAndExecute is not working
+ */
+export async function executeBridgeThenSwap(
+  params: SimulateSwapParams
+): Promise<BridgeAndExecuteResult | null> {
+  const { fromAmount, fromToken, fromChain, toToken, userAddress } = params;
+
+  if (!SUPPORTED_TOKENS.includes(fromToken)) {
+    console.error(`Token ${fromToken} not supported`);
+    return null;
+  }
+  
+  if (!SUPPORTED_CHAINS.includes(fromChain)) {
+    console.error(`Chain ${fromChain} not supported`);
+    return null;
+  }
+
+  try {
+    const toTokenData = TO_TOKENS.find(t => t.symbol === toToken);
+    if (!toTokenData) {
+      console.error(`Token ${toToken} not found`);
+      return null;
+    }
+
+    const bridgedTokenAddress = getTokenAddress(fromToken);
+
+    // STEP 1: Bridge tokens to Base
+    console.log('🌉 Step 1: Bridging tokens to Base...');
+    const bridgeParams: BridgeParams = {
+      token: fromToken as any,
+      amount: fromAmount,
+      chainId: BASE_CHAIN_ID,
+      sourceChains: [fromChain]
+    } as BridgeParams;
+
+    console.log('Bridge Params:', JSON.stringify(bridgeParams, null, 2));
+    const bridgeResult: BridgeResult = await sdk.bridge(bridgeParams);
+    
+    console.log('Bridge Result:', JSON.stringify(bridgeResult, null, 2));
+    console.log('Bridge complete:', bridgeResult.success ? '✅' : '❌');
+
+    if (!bridgeResult.success) {
+      console.error('Bridge failed:', bridgeResult.error);
+      return {
+        success: false,
+        error: bridgeResult.error || 'Bridge transaction failed',
+      } as BridgeAndExecuteResult;
+    }
+
+    if (bridgeResult.explorerUrl) {
+      console.log('Bridge Explorer URL:', bridgeResult.explorerUrl);
+    }
+
+    // Wait a bit for the bridge to fully settle
+    console.log('⏳ Waiting for bridge to settle...');
+    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 seconds
+
+    // STEP 2: Execute swap on Base
+    console.log('💱 Step 2: Executing swap on Base...');
+    
+    const executeParams = {
+      toChainId: BASE_CHAIN_ID,
+      contractAddress: UNISWAP_V3_ROUTER,
+      contractAbi: ROUTER_ABI as any,
+      functionName: 'exactInputSingle',
+      buildFunctionParams: (
+        token: SUPPORTED_TOKENS,
+        amount: string,
+        _chainId: SUPPORTED_CHAINS_IDS,
+        _userAddress: `0x${string}`
+      ) => {
+        const decimals = getTokenDecimals(token);
+        const amountWei = parseUnits(amount, decimals);
+        
+        console.log('🔧 buildFunctionParams called:', {
+          token,
+          amount,
+          amountWei: amountWei.toString(),
+          tokenIn: bridgedTokenAddress,
+          tokenOut: toTokenData.address,
+          recipient: userAddress,
+        });
+        
+        return {
+          functionParams: [{
+            tokenIn: bridgedTokenAddress,
+            tokenOut: toTokenData.address,
+            fee: Number(10000), // 1% fee tier for memecoins
+            recipient: userAddress,
+            amountIn: Number(amountWei),
+            amountOutMinimum: Number(0),
+            sqrtPriceLimitX96: Number(0),
+          }],
+        };
+      },
+      waitForReceipt: true,
+      tokenApproval: {
+        token: fromToken as any,
+        amount: fromAmount,
+      },
+    };
+
+    console.log('Execute Params:', JSON.stringify({
+      ...executeParams,
+      contractAbi: '[ABI]' // Don't log full ABI
+    }, null, 2));
+
+    let executeResult: any;
+    try {
+      executeResult = await sdk.execute(executeParams as any);
+      console.log('Execute Result:', executeResult);
+      console.log('Execute complete: ✅');
+    } catch (executeError) {
+      console.error('Execute failed:', executeError);
+      return {
+        success: false,
+        error: executeError instanceof Error ? executeError.message : 'Swap execution failed',
+        bridgeTransactionHash: bridgeResult.transactionHash,
+      } as BridgeAndExecuteResult;
+    }
+
+    // Extract transaction details from executeResult
+    const executeTransactionHash = executeResult?.transactionHash || executeResult?.txHash || executeResult?.hash;
+    const executeExplorerUrl = executeResult?.explorerUrl || executeResult?.blockExplorerUrl;
+
+    if (executeTransactionHash) {
+      console.log('Execute Transaction Hash:', executeTransactionHash);
+    }
+    if (executeExplorerUrl) {
+      console.log('Execute Explorer URL:', executeExplorerUrl);
+    }
+
+    // Return combined result
+    return {
+      success: true,
+      bridgeTransactionHash: bridgeResult.transactionHash,
+      executeTransactionHash: executeTransactionHash,
+      bridgeExplorerUrl: bridgeResult.explorerUrl,
+      executeExplorerUrl: executeExplorerUrl,
+    } as BridgeAndExecuteResult;
+
+  } catch (error) {
+    console.error('Bridge Then Swap failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',

@@ -4,7 +4,7 @@ import { CHAINS, FROM_TOKENS, TO_TOKENS } from '../lib/chains';
 import type { TokenBalance } from '../App';
 import { useAccount } from 'wagmi';
 import type { BridgeAndExecuteSimulationResult, BridgeAndExecuteResult } from '@avail-project/nexus-core';
-import { simulateBridgeAndExecute, getSwapQuoteOnBase, executeBridgeAndSwap } from '../lib/simulation';
+import { simulateBridgeAndExecute, getSwapQuoteOnBase, executeBridgeThenSwap } from '../lib/simulation';
 import '../styles/SwapComponent.css';
 
 interface SwapComponentProps {
@@ -174,10 +174,10 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
         console.warn('Could not fetch initial Base balance:', error);
       }
 
-      // Execute the bridge and swap
+      // Execute the bridge and swap (using two-step approach)
       setExecutionStatus(`🌉 Bridging ${fromAmount} ${fromToken} from ${CHAINS.find(c => c.id === fromChain)?.name}...`);
       
-      const result = await executeBridgeAndSwap({
+      const result = await executeBridgeThenSwap({
         fromAmount,
         fromToken,
         fromChain,
