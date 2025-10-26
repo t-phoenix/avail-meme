@@ -22,7 +22,7 @@ export async function simulateExecuteOnlyOnBase(params: {
   toToken: string;
   userAddress: `0x${string}`;
 }) {
-  const { fromToken, fromAmount, toToken, userAddress } = params;
+  const { fromToken, fromAmount, toToken } = params;
 
   try {
     // Get token addresses on Base (what we'd have after bridging)

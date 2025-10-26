@@ -33,8 +33,8 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionStatus, setExecutionStatus] = useState<string>('');
-  const [executionResult, setExecutionResult] = useState<BridgeAndExecuteResult | null>(null);
-  const [balanceChange, setBalanceChange] = useState<{
+  const [_executionResult, setExecutionResult] = useState<BridgeAndExecuteResult | null>(null);
+  const [_balanceChange, setBalanceChange] = useState<{
     fromBalance: string;
     toBalance: string;
     change: string;
