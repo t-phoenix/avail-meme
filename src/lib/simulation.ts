@@ -3,6 +3,7 @@ import { base } from 'viem/chains';
 import type { 
   BridgeAndExecuteParams, 
   BridgeAndExecuteSimulationResult,
+  BridgeAndExecuteResult,
   SUPPORTED_TOKENS,
   SUPPORTED_CHAINS_IDS 
 } from '@avail-project/nexus-core';
@@ -133,7 +134,6 @@ const ROUTER_ABI = [{
       { internalType: 'address', name: 'tokenOut', type: 'address' },
       { internalType: 'uint24', name: 'fee', type: 'uint24' },
       { internalType: 'address', name: 'recipient', type: 'address' },
-      { internalType: 'uint256', name: 'deadline', type: 'uint256' },
       { internalType: 'uint256', name: 'amountIn', type: 'uint256' },
       { internalType: 'uint256', name: 'amountOutMinimum', type: 'uint256' },
       { internalType: 'uint160', name: 'sqrtPriceLimitX96', type: 'uint160' },
@@ -170,56 +170,146 @@ export async function simulateBridgeAndExecute(
       return null;
     }
 
-    const amountInWei = parseUnits(fromAmount, getTokenDecimals(fromToken));
     const bridgedTokenAddress = getTokenAddress(fromToken);
 
     const bridgeParams: BridgeAndExecuteParams = {
       token: fromToken as any,
-      amount: amountInWei.toString(),
+      amount: fromAmount, // Keep in human-readable format, SDK handles conversion
       toChainId: BASE_CHAIN_ID,
       sourceChains: [fromChain],
       recipient: userAddress,
       execute: {
         contractAddress: UNISWAP_V3_ROUTER,
-        contractAbi: ROUTER_ABI,
+        contractAbi: ROUTER_ABI as any,
         functionName: 'exactInputSingle',
         buildFunctionParams: (
-          token: SUPPORTED_TOKENS,
+          _token: SUPPORTED_TOKENS,
           amount: string,
           _chainId: SUPPORTED_CHAINS_IDS,
           userAddress: `0x${string}`
         ) => {
-          const amountWei = parseUnits(amount, getTokenDecimals(token));
-          const deadline = Math.floor(Date.now() / 1000) + 1200; // 20 minutes
-          const amountOutMinimum = (amountWei * BigInt(95)) / BigInt(100); // 5% slippage
-          
+
+          // Router expects a single struct parameter, not separate parameters
+          const amountWithDecimals = Number(amount) * 10 ** getTokenDecimals(fromToken);
           return {
             functionParams: [{
               tokenIn: bridgedTokenAddress,
               tokenOut: toTokenData.address,
-              fee: 10000, // 1% fee tier for memecoins
+              fee: BigInt(10000), // 1% fee tier for memecoins
               recipient: userAddress,
-              deadline,
-              amountIn: amountWei,
-              amountOutMinimum,
-              sqrtPriceLimitX96: 0,
+              amountIn: BigInt(amountWithDecimals), // amount is in wei from bridge
+              amountOutMinimum: BigInt(0),
+              sqrtPriceLimitX96: BigInt(0),
             }],
           };
         },
         tokenApproval: {
           token: fromToken as any,
-          amount: amountInWei.toString(),
+          amount: fromAmount, // Human-readable format
         },
       },
       waitForReceipt: true,
     } as BridgeAndExecuteParams;
+    // console.log('Bridge Params:', JSON.stringify(bridgeParams.execute, null, 2));
 
     const simulation = await sdk.simulateBridgeAndExecute(bridgeParams);
+    console.log('Simulation RAW:', JSON.stringify(simulation, null, 2));
     console.log('Simulation complete:', simulation.success ? '✅' : '❌');
     return simulation;
   } catch (error) {
     console.error('Simulation failed:', error);
     return null;
+  }
+}
+
+export async function executeBridgeAndSwap(
+  params: SimulateSwapParams
+): Promise<BridgeAndExecuteResult | null> {
+  const { fromAmount, fromToken, fromChain, toToken, userAddress } = params;
+
+  if (!SUPPORTED_TOKENS.includes(fromToken)) {
+    console.error(`Token ${fromToken} not supported`);
+    return null;
+  }
+  
+  if (!SUPPORTED_CHAINS.includes(fromChain)) {
+    console.error(`Chain ${fromChain} not supported`);
+    return null;
+  }
+
+  try {
+    const toTokenData = TO_TOKENS.find(t => t.symbol === toToken);
+    if (!toTokenData) {
+      console.error(`Token ${toToken} not found`);
+      return null;
+    }
+
+    const bridgedTokenAddress = getTokenAddress(fromToken);
+
+    const bridgeParams: BridgeAndExecuteParams = {
+      token: fromToken as any,
+      amount: fromAmount, // Keep in human-readable format, SDK handles conversion
+      toChainId: BASE_CHAIN_ID,
+      sourceChains: [fromChain],
+      recipient: userAddress,
+      execute: {
+        contractAddress: UNISWAP_V3_ROUTER,
+        contractAbi: ROUTER_ABI as any,
+        functionName: 'exactInputSingle',
+        buildFunctionParams: (
+          _token: SUPPORTED_TOKENS,
+          amount: string,
+          _chainId: SUPPORTED_CHAINS_IDS,
+          userAddress: `0x${string}`
+        ) => {
+          // Router expects a single struct parameter, not separate parameters
+          const amountWithDecimals = Number(amount) * 10 ** getTokenDecimals(fromToken);
+          return {
+            functionParams: [{
+              tokenIn: bridgedTokenAddress,
+              tokenOut: toTokenData.address,
+              fee: BigInt(10000), // 1% fee tier for memecoins
+              recipient: userAddress,
+              amountIn: BigInt(amountWithDecimals), // amount is in wei from bridge
+              amountOutMinimum: BigInt(0),
+              sqrtPriceLimitX96: BigInt(0),
+            }],
+          };
+        },
+        tokenApproval: {
+          token: fromToken as any,
+          amount: fromAmount, // Human-readable format
+        },
+      },
+      waitForReceipt: true,
+      receiptTimeout: 300000, // 5 minutes
+    } as BridgeAndExecuteParams;
+    
+    console.log('Executing Bridge and Swap...');
+    // console.log('Bridge Params:', JSON.stringify(bridgeParams.execute, null, 2));
+
+    const result = await sdk.bridgeAndExecute(bridgeParams);
+    
+    console.log('Execution Result:', JSON.stringify(result, null, 2));
+    console.log('Execution complete:', result.success ? '✅' : '❌');
+    
+    if (result.success) {
+      console.log('Bridge Transaction Hash:', result.bridgeTransactionHash);
+      console.log('Execute Transaction Hash:', result.executeTransactionHash);
+      if (result.executeExplorerUrl) {
+        console.log('Explorer URL:', result.executeExplorerUrl);
+      }
+    } else {
+      console.error('Execution failed:', result.error);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Bridge and Execute failed:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    } as BridgeAndExecuteResult;
   }
 }
 

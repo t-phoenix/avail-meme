@@ -86,7 +86,7 @@
   flex-direction: column;
   overflow: hidden;
   height: 100%;
-  max-height: calc(100vh - 12rem);
+  max-height: calc(100vh - 8rem);
 }
 
 /* Responsive Design */
