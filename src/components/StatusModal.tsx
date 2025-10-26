@@ -30,8 +30,7 @@ export default function StatusModal({
 }: StatusModalProps) {
   if (!isOpen) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getStepIcon = (step: string, status: StepStatus) => {
+  const getStepIcon = (status: StepStatus) => {
     if (status === 'completed') {
       return '✓';
     }
@@ -102,7 +101,7 @@ export default function StatusModal({
                 } ${step.status === 'error' ? 'error' : ''}`}
               >
                 <div className="step-icon">
-                  {getStepIcon(step.key, step.status)}
+                  {getStepIcon(step.status)}
                 </div>
                 <div className="step-content">
                   <div className="step-label">{step.label}</div>
