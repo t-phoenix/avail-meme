@@ -27,6 +27,18 @@
   align-items: center;
 }
 
+.title-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-logo {
+  height: 4.2rem;
+  width: auto;
+  object-fit: contain;
+}
+
 .app-title {
   font-size: 1.5rem;
   font-weight: bold;
@@ -120,6 +132,10 @@
     padding: 0.75rem 1rem;
   }
 
+  .app-logo {
+    height: 2.5rem;
+  }
+
   .app-title {
     font-size: 1.25rem;
   }
@@ -137,6 +153,14 @@
   .header-content {
     flex-direction: row;
     gap: 0.5rem;
+  }
+
+  .title-container {
+    gap: 0.5rem;
+  }
+
+  .app-logo {
+    height: 2rem;
   }
 
   .app-title {

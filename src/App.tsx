@@ -34,7 +34,10 @@ function App() {
       {/* Header */}
       <header className="header">
         <div className="header-content">
-          <h1 className="app-title">Avail Meme</h1>
+          <div className="title-container">
+            <img src="/avail-meme.png" alt="Avail Meme Logo" className="app-logo" />
+            <h1 className="app-title">Avail Meme</h1>
+          </div>
           <ConnectWalletButton className="connect-button" />
         </div>
       </header>
