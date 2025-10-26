@@ -46,12 +46,14 @@ function App() {
             <SwapComponent 
               selectedToken={selectedToken}
               unifiedBalances={unifiedBalances}
+              onBalancesUpdate={handleBalancesUpdate}
             />
           </div>
           <div className="balance-panel-container">
             <BalancePanel 
               onTokenSelect={handleTokenSelect}
               onBalancesUpdate={handleBalancesUpdate}
+              externalBalances={unifiedBalances}
             />
           </div>
         </div>

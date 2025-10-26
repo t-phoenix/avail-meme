@@ -9,9 +9,10 @@ import '../styles/BalancePanel.css';
 interface BalancePanelProps {
   onTokenSelect: (token: TokenBalance) => void;
   onBalancesUpdate: (balances: TokenBalance[]) => void;
+  externalBalances?: TokenBalance[];
 }
 
-export default function BalancePanel({ onTokenSelect, onBalancesUpdate }: BalancePanelProps) {
+export default function BalancePanel({ onTokenSelect, onBalancesUpdate, externalBalances }: BalancePanelProps) {
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [rawBalanceData, setRawBalanceData] = useState<any>(null);
@@ -49,6 +50,19 @@ export default function BalancePanel({ onTokenSelect, onBalancesUpdate }: Balanc
 
     autoInitialize();
   }, [connector]);
+
+  // Sync with external balance updates (e.g., after transaction)
+  useEffect(() => {
+    if (externalBalances && externalBalances.length > 0) {
+      // Check if the balances are actually different
+      const isDifferent = JSON.stringify(externalBalances) !== JSON.stringify(tokens);
+      if (isDifferent) {
+        console.log('🔄 Syncing BalancePanel with external balance update');
+        setTokens(externalBalances);
+        setIsLoading(false);
+      }
+    }
+  }, [externalBalances]);
 
   const handleBalanceFetch = (result: any) => {
     setIsLoading(true);

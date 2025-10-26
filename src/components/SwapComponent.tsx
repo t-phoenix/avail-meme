@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { isInitialized, sdk } from '../lib/nexus';
+import { isInitialized, sdk, getUnifiedBalances } from '../lib/nexus';
 import { CHAINS, FROM_TOKENS, TO_TOKENS } from '../lib/chains';
 import type { TokenBalance } from '../App';
 import { useAccount } from 'wagmi';
 import type { BridgeAndExecuteSimulationResult, BridgeAndExecuteResult } from '@avail-project/nexus-core';
 import { simulateBridgeAndExecute, getSwapQuoteOnBase, executeBridgeThenSwap } from '../lib/simulation';
+import StatusModal, { type StepStatus } from './StatusModal';
 import '../styles/SwapComponent.css';
 
 interface SwapComponentProps {
   selectedToken: TokenBalance | null;
   unifiedBalances: TokenBalance[];
+  onBalancesUpdate?: (balances: TokenBalance[]) => void;
 }
 
 const SUPPORTED_INPUT_TOKENS = ['ETH', 'USDC', 'USDT'];
@@ -21,7 +23,7 @@ const formatBalance = (balance: string): string => {
   return value.toPrecision(2);
 };
 
-export default function SwapComponent({ selectedToken, unifiedBalances }: SwapComponentProps) {
+export default function SwapComponent({ selectedToken, unifiedBalances, onBalancesUpdate }: SwapComponentProps) {
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [fromChain, setFromChain] = useState(1);
@@ -39,6 +41,25 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
     toBalance: string;
     change: string;
   } | null>(null);
+  
+  // Status modal state
+  const [currentStep, setCurrentStep] = useState<'bridge' | 'approval' | 'swap'>('bridge');
+  const [stepStatuses, setStepStatuses] = useState<{
+    bridge: StepStatus;
+    approval: StepStatus;
+    swap: StepStatus;
+  }>({
+    bridge: 'pending',
+    approval: 'pending',
+    swap: 'pending',
+  });
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [bridgeTransactionHash, setBridgeTransactionHash] = useState<string>('');
+  const [swapTransactionHash, setSwapTransactionHash] = useState<string>('');
+  const [bridgeExplorerUrl, setBridgeExplorerUrl] = useState<string>('');
+  const [swapExplorerUrl, setSwapExplorerUrl] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   const { isConnected, address } = useAccount();
 
   const getCurrentBalance = () => 
@@ -150,6 +171,19 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
 
     try {
       setIsExecuting(true);
+      setIsModalOpen(true);
+      setModalError(null);
+      setCurrentStep('bridge');
+      setStepStatuses({
+        bridge: 'in-progress',
+        approval: 'pending',
+        swap: 'pending',
+      });
+      // Reset transaction URLs
+      setBridgeTransactionHash('');
+      setSwapTransactionHash('');
+      setBridgeExplorerUrl('');
+      setSwapExplorerUrl('');
       setExecutionStatus('🔄 Preparing transaction...');
       setExecutionResult(null);
       setBalanceChange(null);
@@ -177,12 +211,50 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
       // Execute the bridge and swap (using two-step approach)
       setExecutionStatus(`🌉 Bridging ${fromAmount} ${fromToken} from ${CHAINS.find(c => c.id === fromChain)?.name}...`);
       
+      // Execute with step tracking
       const result = await executeBridgeThenSwap({
         fromAmount,
         fromToken,
         fromChain,
         toToken,
         userAddress: address,
+        onBridgeStart: () => {
+          setCurrentStep('bridge');
+          setStepStatuses(prev => ({ ...prev, bridge: 'in-progress' }));
+        },
+        onBridgeComplete: () => {
+          setStepStatuses(prev => ({ ...prev, bridge: 'completed' }));
+          setCurrentStep('approval');
+        },
+        onApprovalStart: () => {
+          setCurrentStep('approval');
+          setStepStatuses(prev => ({ ...prev, approval: 'in-progress' }));
+        },
+        onApprovalComplete: () => {
+          setStepStatuses(prev => ({ ...prev, approval: 'completed' }));
+          setCurrentStep('swap');
+        },
+        onSwapStart: () => {
+          setCurrentStep('swap');
+          setStepStatuses(prev => ({ ...prev, swap: 'in-progress' }));
+        },
+        onSwapComplete: () => {
+          setStepStatuses(prev => ({ ...prev, swap: 'completed' }));
+        },
+        onError: (error: string) => {
+          setModalError(error);
+          setStepStatuses(prev => {
+            const newStatuses = { ...prev };
+            if (prev.bridge === 'in-progress') {
+              newStatuses.bridge = 'error';
+            } else if (prev.approval === 'in-progress') {
+              newStatuses.approval = 'error';
+            } else if (prev.swap === 'in-progress') {
+              newStatuses.swap = 'error';
+            }
+            return newStatuses;
+          });
+        },
       });
 
       if (!result) {
@@ -193,8 +265,12 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
         throw new Error(result.error || 'Transaction failed');
       }
 
-      // Store result
+      // Store result and transaction URLs
       setExecutionResult(result);
+      setBridgeTransactionHash(result.bridgeTransactionHash || '');
+      setSwapTransactionHash(result.executeTransactionHash || '');
+      setBridgeExplorerUrl(result.bridgeExplorerUrl || '');
+      setSwapExplorerUrl(result.executeExplorerUrl || '');
       setExecutionStatus('✅ Transaction completed successfully!');
 
       // Get final balances
@@ -221,37 +297,86 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
         change: balanceDiff.toFixed(6),
       });
 
-      // Show success message
-      const successMessage = [
-        '✅ Swap Completed Successfully!',
-        '',
-        `From: ${fromAmount} ${fromToken} on ${CHAINS.find(c => c.id === fromChain)?.name}`,
-        `To: ${balanceDiff > 0 ? '+' : ''}${balanceDiff.toFixed(6)} ${toToken} on Base`,
-        '',
-        `Final Balance: ${parseFloat(finalToBalanceValue).toFixed(6)} ${toToken}`,
-        '',
-        result.executeTransactionHash ? `Tx: ${result.executeTransactionHash.slice(0, 10)}...${result.executeTransactionHash.slice(-8)}` : '',
-      ].join('\n');
-
-      alert(successMessage);
+      // Modal already shows success, no need for alert
 
       // Open explorer if available
       if (result.executeExplorerUrl) {
-        const openExplorer = confirm('Would you like to view the transaction in the explorer?');
-        if (openExplorer) {
-          window.open(result.executeExplorerUrl, '_blank');
-        }
+        // Auto-open explorer after 3 seconds
+        setTimeout(() => {
+          const openExplorer = confirm('Would you like to view the transaction in the explorer?');
+          if (openExplorer) {
+            window.open(result.executeExplorerUrl, '_blank');
+          }
+        }, 3000);
       }
 
-      // Reset form
-      setFromAmount('');
-      setToAmount('');
-      setSimulationResult(null);
+      // Refresh balances after successful transaction
+      setTimeout(async () => {
+        try {
+          console.log('🔄 Refreshing balances after transaction...');
+          const freshBalances = await getUnifiedBalances();
+          
+          // Parse and update balances
+          const parsedTokens: TokenBalance[] = [];
+          if (Array.isArray(freshBalances)) {
+            freshBalances.forEach((abstractedToken: any) => {
+              const { symbol, icon, breakdown } = abstractedToken;
+              if (Array.isArray(breakdown)) {
+                breakdown.forEach((chainBalance: any) => {
+                  const { balance, chain, contractAddress, decimals, balanceInFiat } = chainBalance;
+                  if (parseFloat(balance) === 0) return;
+                  const isNative = contractAddress === '0x0000000000000000000000000000000000000000';
+                  parsedTokens.push({
+                    chain: chain.name,
+                    chainId: chain.id,
+                    chainLogo: chain.logo,
+                    symbol: symbol,
+                    balance: balance,
+                    decimals: decimals,
+                    contractAddress: contractAddress,
+                    isNative: isNative,
+                    icon: icon,
+                    balanceInFiat: balanceInFiat,
+                  });
+                });
+              }
+            });
+          }
+          
+          if (onBalancesUpdate) {
+            onBalancesUpdate(parsedTokens);
+            console.log('✅ Balances refreshed successfully');
+          }
+        } catch (error) {
+          console.warn('Could not refresh balances:', error);
+        }
+      }, 3000);
+
+      // Reset form after modal auto-closes
+      setTimeout(() => {
+        setFromAmount('');
+        setToAmount('');
+        setSimulationResult(null);
+      }, 5000);
 
     } catch (error) {
       console.error('Swap execution error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setExecutionStatus(`❌ Error: ${errorMessage}`);
+      setModalError(errorMessage);
+      
+      // Update step statuses to show error
+      setStepStatuses(prev => {
+        const newStatuses = { ...prev };
+        if (prev.bridge === 'in-progress') {
+          newStatuses.bridge = 'error';
+        } else if (prev.approval === 'in-progress') {
+          newStatuses.approval = 'error';
+        } else if (prev.swap === 'in-progress') {
+          newStatuses.swap = 'error';
+        }
+        return newStatuses;
+      });
       
       alert(`❌ Transaction Failed\n\n${errorMessage}\n\nPlease try again or check the console for more details.`);
       
@@ -500,6 +625,33 @@ export default function SwapComponent({ selectedToken, unifiedBalances }: SwapCo
       >
         {getButtonText()}
       </button>
+
+      {/* Status Modal */}
+      <StatusModal
+        isOpen={isModalOpen}
+        currentStep={currentStep}
+        stepStatuses={stepStatuses}
+        error={modalError || undefined}
+        bridgeTransactionHash={bridgeTransactionHash}
+        swapTransactionHash={swapTransactionHash}
+        bridgeExplorerUrl={bridgeExplorerUrl}
+        swapExplorerUrl={swapExplorerUrl}
+        onClose={() => {
+          setIsModalOpen(false);
+          setIsExecuting(false);
+          setStepStatuses({
+            bridge: 'pending',
+            approval: 'pending',
+            swap: 'pending',
+          });
+          setCurrentStep('bridge');
+          setModalError(null);
+          setBridgeTransactionHash('');
+          setSwapTransactionHash('');
+          setBridgeExplorerUrl('');
+          setSwapExplorerUrl('');
+        }}
+      />
     </div>
   );
 }

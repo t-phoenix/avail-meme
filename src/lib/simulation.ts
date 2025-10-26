@@ -315,14 +315,33 @@ export async function executeBridgeAndSwap(
   }
 }
 
+interface ExecuteBridgeThenSwapParams extends SimulateSwapParams {
+  onBridgeStart?: () => void;
+  onBridgeComplete?: () => void;
+  onApprovalStart?: () => void;
+  onApprovalComplete?: () => void;
+  onSwapStart?: () => void;
+  onSwapComplete?: () => void;
+  onError?: (error: string) => void;
+}
+
 /**
  * Execute bridge then swap - Two separate operations
  * First bridges tokens to Base, then executes the swap on Base
  * This is the recommended approach when bridgeAndExecute is not working
  */
 export async function executeBridgeThenSwap(
-  params: SimulateSwapParams
+  params: ExecuteBridgeThenSwapParams
 ): Promise<BridgeAndExecuteResult | null> {
+  const { 
+    onBridgeStart,
+    onBridgeComplete,
+    onApprovalStart,
+    onApprovalComplete,
+    onSwapStart,
+    onSwapComplete,
+    onError,
+  } = params;
   const { fromAmount, fromToken, fromChain, toToken, userAddress } = params;
 
   if (!SUPPORTED_TOKENS.includes(fromToken)) {
@@ -346,6 +365,8 @@ export async function executeBridgeThenSwap(
 
     // STEP 1: Bridge tokens to Base
     console.log('🌉 Step 1: Bridging tokens to Base...');
+    onBridgeStart?.();
+    
     const bridgeParams: BridgeParams = {
       token: fromToken as any,
       amount: fromAmount,
@@ -354,16 +375,30 @@ export async function executeBridgeThenSwap(
     } as BridgeParams;
 
     console.log('Bridge Params:', JSON.stringify(bridgeParams, null, 2));
-    const bridgeResult: BridgeResult = await sdk.bridge(bridgeParams);
+    
+    let bridgeResult: BridgeResult;
+    try {
+      bridgeResult = await sdk.bridge(bridgeParams);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Bridge failed';
+      onError?.(errorMsg);
+      console.error('Bridge failed:', error);
+      return {
+        success: false,
+        error: errorMsg,
+      } as BridgeAndExecuteResult;
+    }
     
     console.log('Bridge Result:', JSON.stringify(bridgeResult, null, 2));
     console.log('Bridge complete:', bridgeResult.success ? '✅' : '❌');
 
     if (!bridgeResult.success) {
+      const errorMsg = bridgeResult.error || 'Bridge transaction failed';
+      onError?.(errorMsg);
       console.error('Bridge failed:', bridgeResult.error);
       return {
         success: false,
-        error: bridgeResult.error || 'Bridge transaction failed',
+        error: errorMsg,
       } as BridgeAndExecuteResult;
     }
 
@@ -371,12 +406,15 @@ export async function executeBridgeThenSwap(
       console.log('Bridge Explorer URL:', bridgeResult.explorerUrl);
     }
 
+    onBridgeComplete?.();
+
     // Wait a bit for the bridge to fully settle
     console.log('⏳ Waiting for bridge to settle...');
     await new Promise(resolve => setTimeout(resolve, 5000)); // 5 seconds
 
-    // STEP 2: Execute swap on Base
+    // STEP 2: Execute swap on Base (includes approval + swap)
     console.log('💱 Step 2: Executing swap on Base...');
+    onApprovalStart?.();
     
     const executeParams = {
       toChainId: BASE_CHAIN_ID,
@@ -425,16 +463,34 @@ export async function executeBridgeThenSwap(
       contractAbi: '[ABI]' // Don't log full ABI
     }, null, 2));
 
+    // SDK internally handles both approval and swap atomically
+    // During SDK execution, both transactions happen back-to-back:
+    // 1. User is prompted for approval transaction
+    // 2. User is prompted for swap transaction
+    // Since we can't get callbacks during SDK execution, we'll keep swap as in-progress
+    // during the entire SDK call, then mark both complete afterwards
+    
     let executeResult: any;
     try {
+      // Start swap as in-progress before SDK execute
+      // This way both show as in-progress during SDK execution
+      onSwapStart?.();
+      
       executeResult = await sdk.execute(executeParams as any);
       console.log('Execute Result:', executeResult);
       console.log('Execute complete: ✅');
+      
+      // After SDK completes, mark approval complete, then swap complete
+      onApprovalComplete?.(); // Approval gets tick
+      await new Promise(resolve => setTimeout(resolve, 200));
+      onSwapComplete?.(); // Swap gets tick
     } catch (executeError) {
+      const errorMsg = executeError instanceof Error ? executeError.message : 'Swap execution failed';
+      onError?.(errorMsg);
       console.error('Execute failed:', executeError);
       return {
         success: false,
-        error: executeError instanceof Error ? executeError.message : 'Swap execution failed',
+        error: errorMsg,
         bridgeTransactionHash: bridgeResult.transactionHash,
       } as BridgeAndExecuteResult;
     }
